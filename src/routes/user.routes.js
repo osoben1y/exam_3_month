@@ -23,6 +23,8 @@ router
   )
   .post('/registerAuthor', JwtAuthGuard, AdminGuard, controller.registerAuthor)
   .post('/signin', controller.signinUser)
+  .post('/send-otp', controller.sendOtp)
+  .post('/verify-otp', controller.verifyOtp)
   .get('/', JwtAuthGuard, AdminGuard, controller.getAllUsers)
   .get('/:id', JwtAuthGuard, AdminGuard, controller.getUserById)
   .patch('/:id', JwtAuthGuard, AdminGuard, controller.updateUserById)

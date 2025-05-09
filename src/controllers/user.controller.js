@@ -8,6 +8,9 @@ import {
 } from '../utils/generate-token.js';
 import jwt from 'jsonwebtoken';
 import { refTokenWriteCookie } from '../utils/write-cookie.js';
+import { transporter } from '../utils/mailer.js';
+import { otpGenerator } from '../utils/otp-generator.js';
+
 
 export class UserController {
   async registerUser(req, res) {
@@ -176,6 +179,58 @@ export class UserController {
         statusCode: 200,
         message: 'success',
         data: {},
+      });
+    } catch (error) {
+      return catchError(res, 500, error.message);
+    }
+  }
+
+  async sendOtp(req, res) {
+    try {
+      const { email } = req.body;
+      const user = await User.findOne({ email });
+      if (!user) return catchError(res, 404, 'User not found');
+      const otp = otpGenerator();
+      await transporter.sendMail({
+        from: process.env.SMTP_USER,
+        to: email,
+        subject: 'Your OTP Code',
+        text: `Your OTP code is: ${otp}`,
+      });
+      const otpToken = jwt.sign(
+        { otp, email },
+        process.env.ACCESS_TOKEN_KEY,
+        { expiresIn: '5m' }
+      );
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'OTP sent successfully',
+        data: { otpToken },
+      });
+    } catch (error) {
+      return catchError(res, 500, error.message);
+    }
+  }
+
+  async verifyOtp(req, res) {
+    try {
+      const { otpToken, otp: enteredOtp } = req.body;
+      if (!otpToken) return catchError(res, 400, 'OTP token is required');
+      const decoded = jwt.verify(otpToken, process.env.ACCESS_TOKEN_KEY);
+      if (!decoded) return catchError(res, 400, 'Invalid or expired OTP token');
+      if (decoded.otp !== enteredOtp) {
+        return catchError(res, 400, 'Invalid OTP');
+      }
+      const user = await User.findOne({ email: decoded.email });
+      if (!user) return catchError(res, 404, 'User not found');
+      const payload = { id: user._id, role: user.role };
+      const accessToken = generateAccessToken(payload);
+      const refreshToken = generateRefreshToken(payload);
+      refTokenWriteCookie(res, 'refreshTokenUser', refreshToken);
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'OTP verified successfully',
+        data: accessToken,
       });
     } catch (error) {
       return catchError(res, 500, error.message);
