@@ -7,7 +7,8 @@ const router = Router();
 const controller = new EnrollmentController();
 
 router
-  .post('/', JwtAuthGuard, controller.createEnrollment)
+  .post('/', JwtAuthGuard, AdminGuard, controller.createEnrollment)
+  .get('/:id', JwtAuthGuard, controller.getMyEnrollments)
   .get('/', JwtAuthGuard, AdminGuard, controller.getAllEnrollments)
   .get('/:id', JwtAuthGuard, controller.getEnrollmentById)
   .delete('/:id', JwtAuthGuard, AdminGuard, controller.deleteEnrollmentById)

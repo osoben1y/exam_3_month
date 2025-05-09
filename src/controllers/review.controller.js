@@ -1,15 +1,21 @@
 import Review from '../models/review.model.js';
 import { catchError } from '../utils/error-response.js';
 import { reviewValidator } from '../validations/review.validation.js';
+import User from '../models/user.model.js';
+import Course from '../models/course.model.js';
 
 export class ReviewController {
   async createReview(req, res) {
     try {
       const { error, value } = reviewValidator(req.body);
       if (error) return catchError(res, 400, error.message);
-
+      const userExists = await User.findById(value.user);
+      if (!userExists)
+        return catchError(res, 404, `User not found by ID ${value.user}`);
+      const courseExists = await Course.findById(value.course);
+      if (!courseExists)
+        return catchError(res, 404, `Course not found by ID ${value.course}`);
       const review = await Review.create(value);
-
       return res.status(201).json({
         statusCode: 201,
         message: 'Review created successfully',
